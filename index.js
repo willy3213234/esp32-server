@@ -1,26 +1,26 @@
-const WebSocket = require('ws');
-const PORT = process.env.PORT || 3001;
-const wss = new WebSocket.Server({ port: PORT });
+// index.js（或 server.js）
+import { WebSocketServer } from 'ws';
 
-let clients = [];
+const wss = new WebSocketServer({ port: process.env.PORT || 10000 }); // 這樣才會支援 Render 分配的 port
+// 或使用 http server 結合 WebSocket → 更推薦
 
-wss.on('connection', function connection(ws) {
-  console.log('🔌 Client connected');
-  clients.push(ws);
+import http from 'http';
+const server = http.createServer();
 
-  ws.on('message', function incoming(message) {
-    // 廣播給其他 client（前端或 ESP32）
-    clients.forEach(function each(client) {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  });
+const wss = new WebSocketServer({ server });
 
-  ws.on('close', function () {
-    console.log('❌ Client disconnected');
-    clients = clients.filter(c => c !== ws);
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+  ws.on('message', (msg) => {
+    console.log('Received:', msg.toString());
+    // 可傳回給其他 client
+    ws.send(`Echo: ${msg}`);
   });
 });
 
-console.log(`🌐 WebSocket server running on ws://localhost:${PORT}`);
+// 用 render 分配的 port
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log(`✅ Server listening on port ${PORT}`);
+});
+
