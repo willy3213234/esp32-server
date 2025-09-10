@@ -8,5 +8,5 @@
   "dependencies": {
     "ws": "^8.0.0"
   }
-  // 不要加這一行 → "type": "module"
+
 }
