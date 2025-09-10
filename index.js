@@ -26,6 +26,12 @@ wss.on('connection', (ws, req) => {
       }
     });
 
+    esp32Socket.on("message", (data) => {
+    if (phoneSocket && phoneSocket.readyState === WebSocket.OPEN) {
+        phoneSocket.send(data);
+    }
+});
+
     ws.on('close', () => {
       console.log('❌ ESP32 離線');
       esp32 = null;
