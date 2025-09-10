@@ -1,8 +1,11 @@
-// index.js
 import http from 'http';
 import { WebSocketServer } from 'ws';
 
-const server = http.createServer();
+const server = http.createServer((req, res) => {
+  // 預設 HTTP 回應：可給 PWA 的 GitHub frontend 測試用
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('WebSocket server is alive.\n');
+});
 
 const wss = new WebSocketServer({ server });
 
@@ -11,8 +14,6 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (message) => {
     console.log('📥 Received:', message.toString());
-
-    // 回傳給 client
     ws.send(`Echo: ${message}`);
   });
 
@@ -25,4 +26,3 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`🚀 WebSocket server running on port ${PORT}`);
 });
-
