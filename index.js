@@ -88,6 +88,7 @@ server.on('upgrade', (req, socket, head) => {
   else socket.destroy();
 });
 
-server.listen(3001, () => {
-  console.log("✅ WebSocket server running on port 3001");
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log(`🚀 WebSocket server running on port ${PORT}`);
 });
