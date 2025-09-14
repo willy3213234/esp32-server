@@ -19,20 +19,30 @@ function broadcastTo(wss, data) {
 
 // ESP32 上傳音訊
 wss_audio.on('connection', (ws) => {
+  console.log("🎤 ESP32 音訊連線建立");
   esp32_audio = ws;
   ws.on('message', (data) => {
+    console.log(`🔊 收到來自 ESP32 音訊：${data.length} bytes`);
     broadcastTo(wss_toPhone_audio, data);
   });
-  ws.on('close', () => { esp32_audio = null; });
+  ws.on('close', () => {
+    console.log("🛑 ESP32 音訊斷線");
+    esp32_audio = null;
+  });
 });
 
 // ESP32 上傳影像
 wss_video.on('connection', (ws) => {
+  console.log("📸 ESP32 影像連線建立");
   esp32_video = ws;
   ws.on('message', (data) => {
+    console.log(`🖼️ 收到來自 ESP32 影像：${data.length} bytes`);
     broadcastTo(wss_toPhone_video, data);
   });
-  ws.on('close', () => { esp32_video = null; });
+  ws.on('close', () => {
+    console.log("🛑 ESP32 影像斷線");
+    esp32_video = null;
+  });
 });
 
 // 前端接收語音
