@@ -47,15 +47,33 @@ wss_video.on('connection', (ws) => {
 
 // 前端接收語音
 wss_toPhone_audio.on('connection', (ws) => {
-  ws.on('message', (msg) => {
-    if (esp32_audio) esp32_audio.send(msg);
+  ws.on('message', (msg, isBinary) => {
+    if (!esp32_audio) return;
+
+    if (!isBinary) {
+      const text = msg.toString();
+      console.log(`📥 前端發送到 ESP32(audio)：${text}`);
+      esp32_audio.send(text);                 // 🟢 明確送出字串
+    } else {
+      console.log(`📥 前端發送到 ESP32(audio)：binary ${msg.length} bytes`);
+      esp32_audio.send(msg, { binary: true });
+    }
   });
 });
 
 // 前端接收影像
 wss_toPhone_video.on('connection', (ws) => {
-  ws.on('message', (msg) => {
-    if (esp32_video) esp32_video.send(msg);
+  ws.on('message', (msg, isBinary) => {
+    if (!esp32_video) return;
+
+    if (!isBinary) {
+      const text = msg.toString();
+      console.log(`📥 前端發送到 ESP32(video)：${text}`);
+      esp32_video.send(text);                // 🟢 明確送出字串
+    } else {
+      console.log(`📥 前端發送到 ESP32(video)：binary ${msg.length} bytes`);
+      esp32_video.send(msg, { binary: true });
+    }
   });
 });
 
