@@ -1,75 +1,64 @@
+import { WebSocketServer } from 'ws';
 import http from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('WebSocket server is alive.\n');
+const server = http.createServer();
+const wss_audio = new WebSocketServer({ noServer: true });
+const wss_video = new WebSocketServer({ noServer: true });
+const wss_toPhone_audio = new WebSocketServer({ noServer: true });
+const wss_toPhone_video = new WebSocketServer({ noServer: true });
+
+let esp32_audio = null;
+let esp32_video = null;
+
+// 💬 對應前端控制（index.html）→ 收指令轉送至 ESP32
+function broadcastTo(wss, data) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) client.send(data);
+  });
+}
+
+// ESP32 上傳音訊
+wss_audio.on('connection', (ws) => {
+  esp32_audio = ws;
+  ws.on('message', (data) => {
+    broadcastTo(wss_toPhone_audio, data);
+  });
+  ws.on('close', () => { esp32_audio = null; });
 });
 
-const wss = new WebSocketServer({ server });
-
-let esp32 = null;
-let browser = null;
-
-wss.on('connection', (ws, req) => {
-  const url = req.url;
-  console.log('📡 新連線：', url);
-
-  if (url === '/toEsp32') {
-    esp32 = ws;
-    console.log('✅ ESP32 已連線');
-
-    ws.on('message', (message, isBinary) => {
-      if (isBinary) {
-        // 是 binary（音訊或影像）→ 傳給前端
-        if (browser && browser.readyState === WebSocket.OPEN) {
-          browser.send(message, { binary: true });
-        }
-        console.log('📤 ESP32 → 前端：binary，長度', message.length);
-      } else {
-        // 是文字（指令）→ log 並轉發
-        const text = message.toString();
-        console.log('📤 ESP32 → 前端：文字訊息', text);
-        if (browser && browser.readyState === WebSocket.OPEN) {
-          browser.send(text);
-        }
-      }
-    });
-
-    ws.on('close', () => {
-      console.log('❌ ESP32 離線');
-      esp32 = null;
-    });
-
-  } else if (url === '/toPhone') {
-    browser = ws;
-    console.log('📱 手機前端已連線');
-
-    ws.on('message', (message, isBinary) => {
-      if (isBinary) {
-        // 前端傳來 binary（音訊）→ 給 ESP32
-        if (esp32 && esp32.readyState === WebSocket.OPEN) {
-          esp32.send(message, { binary: true });
-        }
-        console.log('📥 前端 → ESP32：binary，長度', message.length);
-      } else {
-        // 前端傳來指令（文字）
-        const text = message.toString();
-        console.log('📥 前端發送：', text);
-        if (esp32 && esp32.readyState === WebSocket.OPEN) {
-          esp32.send(text);
-        }
-      }
-    });
-
-    ws.on('close', () => {
-      console.log('❌ 前端離線');
-      browser = null;
-    });
-  }
+// ESP32 上傳影像
+wss_video.on('connection', (ws) => {
+  esp32_video = ws;
+  ws.on('message', (data) => {
+    broadcastTo(wss_toPhone_video, data);
+  });
+  ws.on('close', () => { esp32_video = null; });
 });
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log(`🚀 WebSocket server running on port ${PORT}`);
+// 前端接收語音
+wss_toPhone_audio.on('connection', (ws) => {
+  ws.on('message', (msg) => {
+    if (esp32_audio) esp32_audio.send(msg);
+  });
+});
+
+// 前端接收影像
+wss_toPhone_video.on('connection', (ws) => {
+  ws.on('message', (msg) => {
+    if (esp32_video) esp32_video.send(msg);
+  });
+});
+
+// Upgrade routing
+server.on('upgrade', (req, socket, head) => {
+  const { url } = req;
+  if (url === '/toEsp32/audio') wss_audio.handleUpgrade(req, socket, head, ws => wss_audio.emit('connection', ws, req));
+  else if (url === '/toEsp32/video') wss_video.handleUpgrade(req, socket, head, ws => wss_video.emit('connection', ws, req));
+  else if (url === '/toPhone/audio') wss_toPhone_audio.handleUpgrade(req, socket, head, ws => wss_toPhone_audio.emit('connection', ws, req));
+  else if (url === '/toPhone/video') wss_toPhone_video.handleUpgrade(req, socket, head, ws => wss_toPhone_video.emit('connection', ws, req));
+  else socket.destroy();
+});
+
+server.listen(3001, () => {
+  console.log("✅ WebSocket server running on port 3001");
 });
