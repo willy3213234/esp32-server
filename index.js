@@ -47,32 +47,33 @@ wss_video.on('connection', (ws) => {
 
 // 前端接收語音
 wss_toPhone_audio.on('connection', (ws) => {
-  ws.on('message', (msg, isBinary) => {
+  ws.on('message', (msg) => {
     if (!esp32_audio) return;
 
-    if (!isBinary) {
-      const text = msg.toString();
+    // 判斷是否為文字指令（START_/STOP_ 開頭）
+    const text = msg.toString();
+    if (text.startsWith('START_') || text.startsWith('STOP_')) {
       console.log(`📥 前端發送到 ESP32(audio)：${text}`);
-      esp32_audio.send(text);                 // 🟢 明確送出字串
+      esp32_audio.send(text);                    // 🟢 用字串送出
     } else {
       console.log(`📥 前端發送到 ESP32(audio)：binary ${msg.length} bytes`);
-      esp32_audio.send(msg, { binary: true });
+      esp32_audio.send(msg, { binary: true });   // 🟢 音訊資料
     }
   });
 });
 
 // 前端接收影像
 wss_toPhone_video.on('connection', (ws) => {
-  ws.on('message', (msg, isBinary) => {
+  ws.on('message', (msg) => {
     if (!esp32_video) return;
 
-    if (!isBinary) {
-      const text = msg.toString();
+    const text = msg.toString();
+    if (text.startsWith('START_') || text.startsWith('STOP_')) {
       console.log(`📥 前端發送到 ESP32(video)：${text}`);
-      esp32_video.send(text);                // 🟢 明確送出字串
+      esp32_video.send(text);                    // 🟢 用字串送出
     } else {
       console.log(`📥 前端發送到 ESP32(video)：binary ${msg.length} bytes`);
-      esp32_video.send(msg, { binary: true });
+      esp32_video.send(msg, { binary: true });   // 🟢 影像資料
     }
   });
 });
