@@ -7,8 +7,12 @@ const wss_video = new WebSocketServer({ noServer: true });
 const wss_toPhone_audio = new WebSocketServer({ noServer: true });
 const wss_toPhone_video = new WebSocketServer({ noServer: true });
 
+const wss_lcd_esp32 = new WebSocketServer({ noServer: true });
+const wss_lcd_phone = new WebSocketServer({ noServer: true });
+
 let esp32_audio = null;
 let esp32_video = null;
+let esp32_lcd = null;
 
 // 💬 對應前端控制（index.html）→ 收指令轉送至 ESP32
 function broadcastTo(wss, data) {
@@ -78,6 +82,27 @@ wss_toPhone_video.on('connection', (ws) => {
   });
 });
 
+
+// 📥 ESP32-LCD 接收前端視訊分片
+wss_lcd_esp32.on('connection', (ws) => {
+  console.log("🖥️ ESP32-LCD 已連線");
+  esp32_lcd = ws;
+  ws.on('close', () => {
+    console.log("❌ ESP32-LCD 離線");
+    esp32_lcd = null;
+  });
+});
+
+// 📤 前端傳來畫面給 ESP32-LCD
+wss_lcd_phone.on('connection', (ws) => {
+  console.log("📱 前端已連線 (LCD)");
+  ws.on('message', (data) => {
+    if (!esp32_lcd || esp32_lcd.readyState !== 1) return;
+    esp32_lcd.send(data, { binary: true });
+  });
+  ws.on('close', () => console.log("❌ 前端離線 (LCD)"));
+});
+
 // Upgrade routing
 server.on('upgrade', (req, socket, head) => {
   const { url } = req;
@@ -85,6 +110,10 @@ server.on('upgrade', (req, socket, head) => {
   else if (url === '/toEsp32/video') wss_video.handleUpgrade(req, socket, head, ws => wss_video.emit('connection', ws, req));
   else if (url === '/toPhone/audio') wss_toPhone_audio.handleUpgrade(req, socket, head, ws => wss_toPhone_audio.emit('connection', ws, req));
   else if (url === '/toPhone/video') wss_toPhone_video.handleUpgrade(req, socket, head, ws => wss_toPhone_video.emit('connection', ws, req));
+  else if (url === '/toEsp32/lcd')
+    wss_lcd_esp32.handleUpgrade(req, socket, head, ws => wss_lcd_esp32.emit('connection', ws, req));
+  else if (url === '/toPhone/lcd')
+    wss_lcd_phone.handleUpgrade(req, socket, head, ws => wss_lcd_phone.emit('connection', ws, req));
   else socket.destroy();
 });
 
