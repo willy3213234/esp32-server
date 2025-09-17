@@ -97,6 +97,7 @@ wss_lcd_esp32.on('connection', (ws) => {
 wss_lcd_phone.on('connection', (ws) => {
   console.log("📱 前端已連線 (LCD)");
   ws.on('message', (data) => {
+    console.log(`📦 前端傳送 ${data.length} bytes 給 ESP32-LCD`);
     if (!esp32_lcd || esp32_lcd.readyState !== 1) return;
     esp32_lcd.send(data, { binary: true });
   });
